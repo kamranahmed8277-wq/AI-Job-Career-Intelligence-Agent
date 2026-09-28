@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from backend.app.services.resume_parser import extract_text_from_pdf
+from backend.app.services.resume_analyzer import analyze_resume
 import os
 import uuid
 
@@ -44,8 +45,14 @@ async def upload_resume(file: UploadFile = File(...)):
 
     extracted_text = extract_text_from_pdf(file_path)
 
+    resume_analysis = analyze_resume(
+        extracted_text["text"]
+    )
+
     return {
         "filename": file.filename,
         "file_id": file_id,
-        "text": extracted_text
+        "text": extracted_text["text"],
+        "character_count": extracted_text["character_count"],
+        "analysis": resume_analysis
     }
