@@ -1,6 +1,12 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from backend.app.services.resume_parser import extract_text_from_pdf
 from backend.app.services.resume_analyzer import analyze_resume
+from pydantic import BaseModel
+from backend.app.services.job_description_analyzer import (
+    analyze_job_description,
+)
+
+
 import os
 import uuid
 
@@ -56,3 +62,11 @@ async def upload_resume(file: UploadFile = File(...)):
         "character_count": extracted_text["character_count"],
         "analysis": resume_analysis
     }
+
+class JobDescriptionRequest(BaseModel):
+    text: str
+
+
+@app.post("/jobs/analyze")
+def analyze_job(request: JobDescriptionRequest):
+    return analyze_job_description(request.text)
