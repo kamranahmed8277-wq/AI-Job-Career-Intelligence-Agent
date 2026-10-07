@@ -5,7 +5,12 @@ from pydantic import BaseModel
 from backend.app.services.job_description_analyzer import (
     analyze_job_description,
 )
-
+from backend.app.services.resume_job_matcher import (
+match_resume_to_job,
+)
+from backend.app.services.job_matching_service import (
+    match_resume_with_job,
+)
 
 import os
 import uuid
@@ -63,10 +68,28 @@ async def upload_resume(file: UploadFile = File(...)):
         "analysis": resume_analysis
     }
 
+
 class JobDescriptionRequest(BaseModel):
     text: str
 
 
+class ResumeJobMatchRequest(BaseModel):
+    resume_text: str
+    job_description: str
+
 @app.post("/jobs/analyze")
 def analyze_job(request: JobDescriptionRequest):
     return analyze_job_description(request.text)
+
+@app.post("/jobs/match")
+def matcher_job(request: ResumeJobMatchRequest):
+    return match_resume_to_job(
+        request.resume_skills,
+        request.required_skills
+    )
+@app.post("/jobs/match-resume")
+def match_resume(request: ResumeJobMatchRequest):
+    return match_resume_with_job(
+        request.resume_text,
+        request.job_description
+    )

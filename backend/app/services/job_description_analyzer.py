@@ -9,9 +9,8 @@ KNOWN_SKILLS = [
     "Azure",
     "Machine Learning",
     "RAG",
-    "LLMs",
+    "LLM",
 ]
-
 
 def normalize_text(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
