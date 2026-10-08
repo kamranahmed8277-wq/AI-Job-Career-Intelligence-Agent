@@ -1,7 +1,8 @@
 from backend.app.services.resume_job_matcher import (
     match_resume_to_job,
+    calculate_match_score,
+    analyze_job_fit,
 )
-
 
 def test_match_resume_to_job():
     resume_skills = ["Python", "FastAPI"]
@@ -14,7 +15,8 @@ def test_match_resume_to_job():
 
     assert result == {
         "matched_skills": ["Python", "FastAPI"],
-        "missing_skills": ["Docker"]
+        "missing_skills": ["Docker"],
+        "match_score": 66.67
     }
 
 
@@ -29,7 +31,8 @@ def test_all_skills_matched():
 
     assert result == {
         "matched_skills": ["Python", "FastAPI", "Docker"],
-        "missing_skills": []
+        "missing_skills": [],
+        "match_score": 100.0
     }
 
 
@@ -44,7 +47,8 @@ def test_all_skills_missing():
 
     assert result == {
         "matched_skills": [],
-        "missing_skills": ["Python", "FastAPI"]
+        "missing_skills": ["Python", "FastAPI"],
+        "match_score": 0.0
     }
 
 
@@ -59,7 +63,8 @@ def test_no_required_skills():
 
     assert result == {
         "matched_skills": [],
-        "missing_skills": []
+        "missing_skills": [],
+        "match_score": 0.0
     }
 
 
@@ -74,7 +79,8 @@ def test_case_insensitive_matching():
 
     assert result == {
         "matched_skills": ["Python", "FastAPI", "Docker"],
-        "missing_skills": []
+        "missing_skills": [],
+        "match_score": 100.0
     }
 
 def test_skill_whitespace_matching():
@@ -88,5 +94,75 @@ def test_skill_whitespace_matching():
 
     assert result == {
         "matched_skills": ["Python", "FastAPI", "Docker"],
-        "missing_skills": []
+        "missing_skills": [],
+        "match_score": 100.0
     }
+
+from backend.app.services.resume_job_matcher import (
+    calculate_match_score,
+)
+
+
+def test_match_score():
+    matched_skills = ["Python", "FastAPI", "Docker"]
+    required_skills = ["Python", "FastAPI", "Docker", "RAG", "LLMs"]
+
+    result = calculate_match_score(
+        matched_skills,
+        required_skills
+    )
+
+    assert result == 60.0
+
+
+def test_match_score_all_matched():
+    matched_skills = ["Python", "FastAPI", "Docker"]
+    required_skills = ["Python", "FastAPI", "Docker"]
+
+    result = calculate_match_score(
+        matched_skills,
+        required_skills
+    )
+
+    assert result == 100.0
+
+
+def test_match_score_no_matches():
+    matched_skills = []
+    required_skills = ["Python", "FastAPI", "Docker"]
+
+    result = calculate_match_score(
+        matched_skills,
+        required_skills
+    )
+
+    assert result == 0.0
+
+
+def test_match_score_no_required_skills():
+    matched_skills = []
+    required_skills = []
+
+    result = calculate_match_score(
+        matched_skills,
+        required_skills
+    )
+
+    assert result == 0.0
+
+def test_strong_job_fit():
+    result = analyze_job_fit(85)
+
+    assert result == "Strong Fit"
+
+
+def test_moderate_job_fit():
+    result = analyze_job_fit(60)
+
+    assert result == "Moderate Fit"
+
+
+def test_weak_job_fit():
+    result = analyze_job_fit(40)
+
+    assert result == "Weak Fit"

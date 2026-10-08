@@ -7,6 +7,29 @@ def normalize_skill(skill: str) -> str:
         skill
     ).strip().lower()
 
+def analyze_job_fit(match_score: float) -> str:
+    if match_score >= 80:
+        return "Strong Fit"
+
+    if match_score >= 60:
+        return "Moderate Fit"
+
+    return "Weak Fit"
+
+
+def calculate_match_score(
+    matched_skills: list[str],
+    required_skills: list[str]
+) -> float:
+
+    if not required_skills:
+        return 0.0
+
+    return round(
+        (len(matched_skills) / len(required_skills)) * 100,
+        2
+    )
+
 
 def match_resume_to_job(
     resume_skills: list[str],
@@ -29,7 +52,16 @@ def match_resume_to_job(
         else:
             missing_skills.append(skill)
 
+    match_score = calculate_match_score(
+        matched_skills,
+        required_skills
+    )
+
+    job_fit = analyze_job_fit(match_score)
+
     return {
         "matched_skills": matched_skills,
-        "missing_skills": missing_skills
+        "missing_skills": missing_skills,
+        "match_score": match_score,
+        "job_fit": job_fit
     }

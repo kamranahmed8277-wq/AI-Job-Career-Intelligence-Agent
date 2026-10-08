@@ -9,7 +9,8 @@ KNOWN_SKILLS = [
     "Azure",
     "Machine Learning",
     "RAG",
-    "LLM",
+    "LLMs",
+    "PyTorch",
 ]
 
 def normalize_text(text: str) -> str:

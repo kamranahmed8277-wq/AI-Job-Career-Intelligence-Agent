@@ -87,6 +87,7 @@ def matcher_job(request: ResumeJobMatchRequest):
         request.resume_skills,
         request.required_skills
     )
+
 @app.post("/jobs/match-resume")
 def match_resume(request: ResumeJobMatchRequest):
     return match_resume_with_job(

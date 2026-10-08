@@ -145,7 +145,7 @@ def extract_experience_records(experience_text: str) -> list[dict]:
                 title = header_lines[-1]
 
                 record = {
-                    "company": company,
+                     "company": company,
                     "title": title,
                     "dates": line,
                     "bullets": []
