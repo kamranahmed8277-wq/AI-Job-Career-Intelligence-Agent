@@ -16,7 +16,8 @@ def test_match_resume_to_job():
     assert result == {
         "matched_skills": ["Python", "FastAPI"],
         "missing_skills": ["Docker"],
-        "match_score": 66.67
+        "match_score": 66.67,
+        "job_fit": "Moderate Fit"
     }
 
 
@@ -32,7 +33,8 @@ def test_all_skills_matched():
     assert result == {
         "matched_skills": ["Python", "FastAPI", "Docker"],
         "missing_skills": [],
-        "match_score": 100.0
+        "match_score": 100.0,
+        "job_fit": "Strong Fit"
     }
 
 
@@ -48,7 +50,8 @@ def test_all_skills_missing():
     assert result == {
         "matched_skills": [],
         "missing_skills": ["Python", "FastAPI"],
-        "match_score": 0.0
+        "match_score": 0.0,
+        "job_fit": "Weak Fit"
     }
 
 
@@ -64,7 +67,8 @@ def test_no_required_skills():
     assert result == {
         "matched_skills": [],
         "missing_skills": [],
-        "match_score": 0.0
+        "match_score": 0.0,
+        "job_fit": "Weak Fit"
     }
 
 
@@ -80,7 +84,8 @@ def test_case_insensitive_matching():
     assert result == {
         "matched_skills": ["Python", "FastAPI", "Docker"],
         "missing_skills": [],
-        "match_score": 100.0
+        "match_score": 100.0,
+        "job_fit": "Strong Fit"
     }
 
 def test_skill_whitespace_matching():
@@ -95,13 +100,9 @@ def test_skill_whitespace_matching():
     assert result == {
         "matched_skills": ["Python", "FastAPI", "Docker"],
         "missing_skills": [],
-        "match_score": 100.0
+        "match_score": 100.0,
+        "job_fit": "Strong Fit"
     }
-
-from backend.app.services.resume_job_matcher import (
-    calculate_match_score,
-)
-
 
 def test_match_score():
     matched_skills = ["Python", "FastAPI", "Docker"]
