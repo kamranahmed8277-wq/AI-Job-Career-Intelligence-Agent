@@ -51,7 +51,7 @@ def test_all_skills_missing():
         "matched_skills": [],
         "missing_skills": ["Python", "FastAPI"],
         "match_score": 0.0,
-        "job_fit": "Weak Fit"
+        "job_fit":"Weak Fit",
     }
 
 
@@ -68,7 +68,7 @@ def test_no_required_skills():
         "matched_skills": [],
         "missing_skills": [],
         "match_score": 0.0,
-        "job_fit": "Weak Fit"
+        "job_fit": "Insufficient Data",
     }
 
 
@@ -151,19 +151,25 @@ def test_match_score_no_required_skills():
 
     assert result == 0.0
 
-def test_strong_job_fit():
-    result = analyze_job_fit(85)
 
+def test_strong_job_fit():
+    result = analyze_job_fit(85, ["Python"])
     assert result == "Strong Fit"
 
 
 def test_moderate_job_fit():
-    result = analyze_job_fit(60)
-
+    result = analyze_job_fit(60, ["Python"])
     assert result == "Moderate Fit"
 
 
 def test_weak_job_fit():
-    result = analyze_job_fit(40)
-
+    result = analyze_job_fit(40, ["Python"])
     assert result == "Weak Fit"
+
+
+def test_job_fit_returns_insufficient_data_when_no_required_skills():
+    assert analyze_job_fit(0.0, []) == "Insufficient Data"
+
+
+def test_job_fit_returns_weak_fit_when_skills_are_required_but_none_match():
+    assert analyze_job_fit(0.0, ["Python"]) == "Weak Fit"

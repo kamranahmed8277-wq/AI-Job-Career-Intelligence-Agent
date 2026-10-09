@@ -7,7 +7,14 @@ def normalize_skill(skill: str) -> str:
         skill
     ).strip().lower()
 
-def analyze_job_fit(match_score: float) -> str:
+
+def analyze_job_fit(
+    match_score: float,
+    required_skills: list[str]
+) -> str:
+    if not required_skills:
+        return "Insufficient Data"
+
     if match_score >= 80:
         return "Strong Fit"
 
@@ -57,7 +64,10 @@ def match_resume_to_job(
         required_skills
     )
 
-    job_fit = analyze_job_fit(match_score)
+    job_fit = analyze_job_fit(
+        match_score,
+        required_skills
+    )
 
     return {
         "matched_skills": matched_skills,
