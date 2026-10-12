@@ -12,6 +12,9 @@ KNOWN_SKILLS = [
     "RAG",
     "LLMs",
     "PyTorch",
+    "Django",
+    "SQL",
+    "Git",
 ]
 
 
