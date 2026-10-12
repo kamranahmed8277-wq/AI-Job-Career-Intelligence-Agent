@@ -238,3 +238,11 @@ def test_complete_ai_engineer_job_description():
     assert result["important_keywords"] == [
         "Generative AI", "LLMs", "cloud deployment", "REST API"
     ]
+
+def test_normalize_text_normalizes_compatibility_unicode_and_preserves_empty_text():
+    """Compatibility forms must not prevent downstream token matching."""
+    from backend.app.services.job_description_analyzer import normalize_text
+
+    assert normalize_text("ＡＩ ﬁ") == "AI fi"
+    assert normalize_text("") == ""
+
