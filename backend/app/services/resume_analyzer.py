@@ -21,16 +21,21 @@ def extract_phone(text: str) -> str | None:
 
     return None
 
+
 def extract_name(text: str) -> str | None:
     lines = text.strip().splitlines()
 
-    if lines:
-        name = lines[0].strip()
+    if not lines:
+        return None
 
-        if re.fullmatch(r"[A-Za-z ]+", name):
-            return name
+    name = lines[0].strip().strip(" .,:;-")
+
+    if re.fullmatch(r"[A-Za-z]+(?:[ '-][A-Za-z]+)*", name):
+        return name
 
     return None
+
+
 KNOWN_SKILLS = [
     "Python",
     "FastAPI",
