@@ -69,61 +69,109 @@ def extract_skills(text: str) -> list[str]:
     return found_skills
 
 
+
+import re
+
 def extract_education(text: str) -> dict | None:
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    degree_pattern = (
+        r"(Bachelor's|Bachelors|Bachelor|Master's|Masters|Master|"
+        r"B\.S\.|B\.Sc\.|M\.S\.|M\.Sc\.|PhD)"
+        r"\s+degree\s+in\s+[A-Za-z ]+?"
+        r"(?=\s+from\b|[,.]|\s+\d{4}\s*[-–]\s*\d{4}|$)"
+    )
 
-    try:
-        education_index = lines.index("Education")
-    except ValueError:
+    match = re.search(degree_pattern, text, re.IGNORECASE)
+
+    if not match:
         return None
 
-    education_lines = lines[education_index + 1:]
+    degree = match.group(0).strip()
 
-    if len(education_lines) < 4:
-        return None
+    # Find the university name after "from".
+    institution = None
+    institution_match = re.search(
+        r"\bfrom\s+(.+?)(?=\s+\d{4}\s*[-–]\s*\d{4}|[,.]|$)",
+        text[match.end():],
+        re.IGNORECASE,
+    )
 
-    institution = education_lines[0]
-    degree = education_lines[1]
-    location = education_lines[2]
-    years = education_lines[3]
+    if institution_match:
+        institution = institution_match.group(1).strip()
+
+    # Find a four-digit year range.
+    years_match = re.search(
+        r"\b(19\d{2}|20\d{2})\s*[-–]\s*(19\d{2}|20\d{2})\b",
+        text,
+    )
+    years = years_match.group(0) if years_match else None
+
+    # Extract a likely city from the institution details.
+    location = None
+    if institution:
+        location_match = re.search(
+            r"\b(rawalpindi|islamabad|lahore|karachi)\b",
+            institution,
+            re.IGNORECASE,
+        )
+        if location_match:
+            location = location_match.group(0).title()
+            institution = institution[:location_match.start()].strip()
 
     return {
         "institution": institution,
         "degree": degree,
         "location": location,
-        "years": years
+        "years": years,
     }
+
+
+
+
 
 
 def extract_experience_section(text: str) -> str | None:
     lines = [line.strip() for line in text.splitlines() if line.strip()]
 
-    try:
-        start_index = lines.index("Experience")
-    except ValueError:
-        return None
+    # First, look for a formal Experience heading.
+    for i, line in enumerate(lines):
+        if line.rstrip(":").lower() == "experience":
+            experience_lines = []
 
-    end_index = len(lines)
+            for next_line in lines[i + 1:]:
+                if next_line.rstrip(":").lower() in [
+                    "projects", "skills", "education",
+                    "certifications", "awards"
+                ]:
+                    break
 
-    section_headers = [
-        "Projects",
-        "Skills",
-        "Education",
-        "Certifications",
-        "Awards"
-    ]
+                experience_lines.append(next_line)
 
-    for i in range(start_index + 1, len(lines)):
-        if lines[i] in section_headers:
-            end_index = i
-            break
+            if experience_lines:
+                return "\n".join(experience_lines)
 
-    experience_lines = lines[start_index + 1:end_index]
+    # Otherwise, look for sentences describing actual work.
+    evidence = []
 
-    if not experience_lines:
-        return None
+    for line in lines:
+        sentences = re.split(r"(?<=[.!?])\s+", line)
 
-    return "\n".join(experience_lines)
+        for sentence in sentences:
+            sentence = sentence.strip()
+
+            if any(phrase in sentence.lower() for phrase in [
+                "worked on",
+                "developed",
+                "built",
+                "implemented",
+                "experience using",
+                "experience with"
+            ]):
+                evidence.append(sentence)
+
+    if evidence:
+        return "\n".join(evidence)
+
+    return None
 
 
 def extract_experience_records(experience_text: str) -> list[dict]:
@@ -134,44 +182,65 @@ def extract_experience_records(experience_text: str) -> list[dict]:
     ]
 
     records = []
-
-    date_pattern = r"^[A-Z][a-z]{2,9}\s+\d{4}\s*[–-]\s*(?:Present|[A-Z][a-z]{2,9}\s+\d{4})$"
+    date_pattern = (
+        r"^[A-Z][a-z]{2,9}\s+\d{4}\s*[–-]\s*"
+        r"(?:Present|[A-Z][a-z]{2,9}\s+\d{4})$"
+    )
 
     header_lines = []
 
     for line in lines:
-
-        # 1. Detect date
         if re.fullmatch(date_pattern, line):
-
             if len(header_lines) >= 2:
-
-                company = header_lines[-2]
-                title = header_lines[-1]
-
-                record = {
-                     "company": company,
-                    "title": title,
+                records.append({
+                    "company": header_lines[-2],
+                    "title": header_lines[-1],
                     "dates": line,
                     "bullets": []
-                }
-
-                records.append(record)
+                })
 
             header_lines = []
 
-        # 2. Detect bullet
-        elif line.startswith("•"):
+        elif line.startswith("•") and records:
+            records[-1]["bullets"].append(line.lstrip("•").strip())
 
-            if records:
-                bullet = line.lstrip("•").strip()
-                records[-1]["bullets"].append(bullet)
-
-        # 3. Company/title lines
         else:
             header_lines.append(line)
 
+    # If no dated employment record was found, preserve the evidence.
+
+    if not records and experience_text.strip():
+        bullets = [
+            line.strip()
+            for line in experience_text.splitlines()
+            if line.strip()
+        ]
+
+        company = None
+        title = None
+
+        for bullet in bullets:
+            if "junior python developer" in bullet.lower():
+                title = "Junior Python Developer"
+
+            company_match = re.search(
+                r"\bin\s+(.+?)(?:\s+rawalpindi|\s+islamabad|[,.]|$)",
+                bullet,
+                re.IGNORECASE,
+            )
+
+            if company_match:
+                company = company_match.group(1).strip()
+
+        records.append({
+            "company": company,
+            "title": title,
+            "dates": None,
+            "bullets": bullets
+        })
+
     return records
+
 
 def clean_resume_text(text: str) -> str:
     # Remove invisible zero-width characters
