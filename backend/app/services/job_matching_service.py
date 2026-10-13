@@ -1,9 +1,12 @@
+
 from backend.app.services.resume_analyzer import analyze_resume
 from backend.app.services.job_description_analyzer import (
     analyze_job_description,
 )
 from backend.app.services.resume_job_matcher import (
     match_resume_to_job,
+    assess_experience,
+    assess_education,
 )
 
 
@@ -13,18 +16,33 @@ def match_resume_with_job(
 ) -> dict:
 
     resume_analysis = analyze_resume(resume_text)
+    job_analysis = analyze_job_description(job_description)
 
-    job_analysis = analyze_job_description(
-        job_description
-    )
-
-    match_result = match_resume_to_job(
+    # Assess skills.
+    skill_match = match_resume_to_job(
         resume_analysis["skills"],
         job_analysis["required_skills"]
+    )
+
+    # Assess experience.
+    experience_assessment = assess_experience(
+        resume_analysis["experience"],
+        job_analysis["required_experience"]
+    )
+
+    # Assess education.
+    education_assessment = assess_education(
+        resume_analysis["education"],
+        job_analysis["education_requirements"]
     )
 
     return {
         "resume_analysis": resume_analysis,
         "job_analysis": job_analysis,
-        "match": match_result
+        "match": skill_match,
+        "job_fit_assessment": {
+            "skills": skill_match,
+            "experience": experience_assessment,
+            "education": education_assessment,
+        }
     }

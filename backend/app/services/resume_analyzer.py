@@ -72,12 +72,14 @@ def extract_skills(text: str) -> list[str]:
 
 import re
 
+
 def extract_education(text: str) -> dict | None:
     degree_pattern = (
         r"(Bachelor's|Bachelors|Bachelor|Master's|Masters|Master|"
         r"B\.S\.|B\.Sc\.|M\.S\.|M\.Sc\.|PhD)"
         r"\s+degree\s+in\s+[A-Za-z ]+?"
-        r"(?=\s+from\b|[,.]|\s+\d{4}\s*[-–]\s*\d{4}|$)"
+        r"(?=\s+from\b|[,.]|\s+\d{4}\s*[-–]\s*\d{4}|"
+        r"\s+(?:Experience|Skills|Projects|Certifications|Awards)\b|$)"
     )
 
     match = re.search(degree_pattern, text, re.IGNORECASE)
@@ -87,7 +89,6 @@ def extract_education(text: str) -> dict | None:
 
     degree = match.group(0).strip()
 
-    # Find the university name after "from".
     institution = None
     institution_match = re.search(
         r"\bfrom\s+(.+?)(?=\s+\d{4}\s*[-–]\s*\d{4}|[,.]|$)",
@@ -98,21 +99,21 @@ def extract_education(text: str) -> dict | None:
     if institution_match:
         institution = institution_match.group(1).strip()
 
-    # Find a four-digit year range.
     years_match = re.search(
         r"\b(19\d{2}|20\d{2})\s*[-–]\s*(19\d{2}|20\d{2})\b",
         text,
     )
     years = years_match.group(0) if years_match else None
 
-    # Extract a likely city from the institution details.
     location = None
+
     if institution:
         location_match = re.search(
             r"\b(rawalpindi|islamabad|lahore|karachi)\b",
             institution,
             re.IGNORECASE,
         )
+
         if location_match:
             location = location_match.group(0).title()
             institution = institution[:location_match.start()].strip()
@@ -123,10 +124,6 @@ def extract_education(text: str) -> dict | None:
         "location": location,
         "years": years,
     }
-
-
-
-
 
 
 def extract_experience_section(text: str) -> str | None:
@@ -182,61 +179,58 @@ def extract_experience_records(experience_text: str) -> list[dict]:
     ]
 
     records = []
-    date_pattern = (
-        r"^[A-Z][a-z]{2,9}\s+\d{4}\s*[–-]\s*"
-        r"(?:Present|[A-Z][a-z]{2,9}\s+\d{4})$"
-    )
-
-    header_lines = []
 
     for line in lines:
-        if re.fullmatch(date_pattern, line):
-            if len(header_lines) >= 2:
-                records.append({
-                    "company": header_lines[-2],
-                    "title": header_lines[-1],
-                    "dates": line,
-                    "bullets": []
-                })
-
-            header_lines = []
-
-        elif line.startswith("•") and records:
-            records[-1]["bullets"].append(line.lstrip("•").strip())
-
-        else:
-            header_lines.append(line)
-
-    # If no dated employment record was found, preserve the evidence.
-
-    if not records and experience_text.strip():
-        bullets = [
-            line.strip()
-            for line in experience_text.splitlines()
-            if line.strip()
-        ]
-
-        company = None
-        title = None
-
-        for bullet in bullets:
-            if "junior python developer" in bullet.lower():
-                title = "Junior Python Developer"
-
-            company_match = re.search(
-                r"\bin\s+(.+?)(?:\s+rawalpindi|\s+islamabad|[,.]|$)",
-                bullet,
-                re.IGNORECASE,
+        # Example: Junior Python Developer at Codecelix Company
+        # from Apr 2026 – Present
+        if " at " in line.lower():
+            parts = re.split(
+                r"\s+at\s+",
+                line,
+                maxsplit=1,
+                flags=re.IGNORECASE
             )
 
-            if company_match:
-                company = company_match.group(1).strip()
+            title = parts[0].strip()
+            company_part = parts[1].strip()
 
+            # Remove an experience claim accidentally included in the title.
+            title = re.sub(
+                r"\s+with\s+\d+\+?\s+years?\s+of\s+experience.*$",
+                "",
+                title,
+                flags=re.IGNORECASE
+            ).strip()
+
+            company = company_part
+            dates = None
+
+            # Separate the company name from employment dates.
+            if " from " in company_part.lower():
+                company_parts = re.split(
+                    r"\s+from\s+",
+                    company_part,
+                    maxsplit=1,
+                    flags=re.IGNORECASE
+                )
+
+                company = company_parts[0].strip()
+                dates = company_parts[1].strip()
+
+            records.append({
+                "company": company,
+                "title": title,
+                "dates": dates,
+                "bullets": []
+            })
+
+    # Keep the original text if no job title/company line was found.
+    if not records and lines:
         records.append({
-            "company": company,
-            "title": title,
+            "company": None,
+            "title": None,
             "dates": None,
-            "bullets": bullets
+            "bullets": lines
         })
 
     return records

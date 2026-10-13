@@ -31,6 +31,10 @@ KNOWN_KEYWORDS = [
     "data pipelines",
     "RAG",
     "model evaluation",
+    "Unit Testing",
+    "Debugging",
+    "Backend Development",
+    "Database Management",
 ]
 
 

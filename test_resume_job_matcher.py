@@ -1,7 +1,10 @@
+from datetime import date
 from backend.app.services.resume_job_matcher import (
     match_resume_to_job,
     calculate_match_score,
     analyze_job_fit,
+    assess_experience,
+    assess_education,
 )
 
 def test_match_resume_to_job():
@@ -203,3 +206,133 @@ def test_unicode_styled_skill_matching():
     assert result["missing_skills"] == []
     assert result["match_score"] == 100.0
     assert result["job_fit"] == "Strong Fit"
+
+
+from backend.app.services.resume_job_matcher import assess_experience
+
+
+def test_experience_unknown_when_job_has_no_requirement():
+    result = assess_experience(
+        [{"company": "Example Company", "dates": "Jan 2025 – Present"}],
+        None
+    )
+
+    assert result["status"] == "Unknown"
+
+
+def test_experience_unknown_when_resume_has_no_records():
+    result = assess_experience([], "1 year of experience")
+
+    assert result["status"] == "Unknown"
+
+
+
+def test_experience_met_when_dates_meet_requirement():
+    result = assess_experience(
+        [{"company": "Example Company", "dates": "Jan 2025 – Present"}],
+        "1 year of experience",
+        reference_date=date(2026, 1, 1)
+    )
+
+    assert result["status"] == "Met"
+
+
+def test_education_requirement_met():
+    result = assess_education(
+        {"degree": "Bachelor's degree in Software Engineering"},
+        ["Bachelor's"]
+    )
+
+    assert result["status"] == "Met"
+
+
+def test_education_unknown_when_resume_has_no_degree():
+    result = assess_education(None, ["Bachelor's"])
+
+    assert result["status"] == "Unknown"
+
+
+def test_education_unknown_when_job_has_no_requirement():
+    result = assess_education(
+        {"degree": "Bachelor's degree in Software Engineering"},
+        []
+    )
+
+    assert result["status"] == "Unknown"
+
+def test_extract_education_stops_before_experience():
+    from backend.app.services.resume_analyzer import extract_education
+
+    resume_text = (
+        "Sara Khan\n"
+        "Education\n"
+        "Bachelor's degree in Software Engineering\n"
+        "Experience\n"
+        "Junior Python Developer at Example Company"
+    )
+
+    result = extract_education(resume_text)
+
+    assert result is not None
+    assert result["degree"] == "Bachelor's degree in Software Engineering"
+
+
+from datetime import date
+
+from backend.app.services.resume_job_matcher import assess_experience
+
+
+def test_experience_met():
+    experience = [
+        {"dates": "Jan 2024 – Present"}
+    ]
+
+    result = assess_experience(
+        experience,
+        "1 year of experience",
+        reference_date=date(2026, 1, 1)
+    )
+
+    assert result["status"] == "Met"
+
+
+def test_experience_not_met():
+    experience = [
+        {"dates": "Jul 2025 – Present"}
+    ]
+
+    result = assess_experience(
+        experience,
+        "1 year of experience",
+        reference_date=date(2026, 1, 1)
+    )
+
+    assert result["status"] == "Not Met"
+
+
+def test_experience_unknown_when_dates_missing():
+    experience = [
+        {"company": "Example Company", "dates": None}
+    ]
+
+    result = assess_experience(
+        experience,
+        "1 year of experience",
+        reference_date=date(2026, 1, 1)
+    )
+
+    assert result["status"] == "Unknown"
+
+
+def test_experience_unknown_when_dates_invalid():
+    experience = [
+        {"dates": "Unknown"}
+    ]
+
+    result = assess_experience(
+        experience,
+        "1 year of experience",
+        reference_date=date(2026, 1, 1)
+    )
+
+    assert result["status"] == "Unknown"

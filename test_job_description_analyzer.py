@@ -8,6 +8,28 @@ from backend.app.services.job_description_analyzer import (
     extract_important_keywords,
 )
 
+def test_extract_important_keywords_from_explicit_section():
+    description = """
+    Junior Python Developer
+
+    Important Keywords:
+    REST API
+    Unit Testing
+    Debugging
+    Backend Development
+    Database Management
+    """
+
+    result = extract_important_keywords(description)
+
+    assert result == [
+        "REST API",
+        "Unit Testing",
+        "Debugging",
+        "Backend Development",
+        "Database Management",
+    ]
+
 def test_extract_required_skills():
     job_description = """
     • Practical knowledge of 𝗣𝘆𝘁𝗵𝗼𝗻
