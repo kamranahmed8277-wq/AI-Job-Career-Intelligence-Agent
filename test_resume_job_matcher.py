@@ -173,3 +173,33 @@ def test_job_fit_returns_insufficient_data_when_no_required_skills():
 
 def test_job_fit_returns_weak_fit_when_skills_are_required_but_none_match():
     assert analyze_job_fit(0.0, ["Python"]) == "Weak Fit"
+
+
+def test_duplicate_required_skills():
+    resume_skills = ["Python", "FastAPI"]
+    required_skills = ["Python", "Python", "FastAPI"]
+
+    result = match_resume_to_job(
+        resume_skills,
+        required_skills
+    )
+
+    assert result["matched_skills"] == ["Python", "FastAPI"]
+    assert result["missing_skills"] == []
+    assert result["match_score"] == 100.0
+    assert result["job_fit"] == "Strong Fit"
+
+
+def test_unicode_styled_skill_matching():
+    resume_skills = ["𝗣𝘆𝘁𝗵𝗼𝗻", "FastAPI"]
+    required_skills = ["Python", "FastAPI"]
+
+    result = match_resume_to_job(
+        resume_skills,
+        required_skills
+    )
+
+    assert result["matched_skills"] == ["Python", "FastAPI"]
+    assert result["missing_skills"] == []
+    assert result["match_score"] == 100.0
+    assert result["job_fit"] == "Strong Fit"

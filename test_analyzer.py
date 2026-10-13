@@ -41,3 +41,29 @@ Rawalpindi, Pakistan
 analysis = analyze_resume(text)
 
 print(analysis)
+
+
+def test_analyze_empty_resume():
+    result = analyze_resume("")
+
+    assert result == {
+        "name": None,
+        "email": None,
+        "phone": None,
+        "skills": [],
+        "education": None,
+        "experience": [],
+    }
+
+
+def test_analyze_whitespace_only_resume():
+    result = analyze_resume("   \n\t  ")
+
+    assert result == {
+        "name": None,
+        "email": None,
+        "phone": None,
+        "skills": [],
+        "education": None,
+        "experience": [],
+    }

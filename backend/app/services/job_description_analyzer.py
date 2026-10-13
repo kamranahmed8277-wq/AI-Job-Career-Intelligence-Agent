@@ -294,6 +294,16 @@ def analyze_job_description(text: str) -> dict:
     """Analyze a job description using rule-based extraction."""
     normalized_text = normalize_text(text)
 
+    if not normalized_text.strip():
+        return {
+            "job_title": None,
+            "required_skills": [],
+            "required_experience": None,
+            "education_requirements": [],
+            "responsibilities": [],
+            "important_keywords": [],
+        }
+
     return {
         "job_title": extract_job_title(normalized_text),
         "required_skills": extract_required_skills(normalized_text),

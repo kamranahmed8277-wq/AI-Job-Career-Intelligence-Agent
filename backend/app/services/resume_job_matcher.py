@@ -38,20 +38,30 @@ def calculate_match_score(
     )
 
 
+
 def match_resume_to_job(
     resume_skills: list[str],
     required_skills: list[str]
 ) -> dict:
-
     normalized_resume_skills = {
-        normalize_skill(skill)
-        for skill in resume_skills
+        normalize_skill(skill) for skill in resume_skills
     }
+
+    # Remove duplicate required skills while preserving order.
+    unique_required_skills = []
+    seen_skills = set()
+
+    for skill in required_skills:
+        normalized_skill = normalize_skill(skill)
+
+        if normalized_skill not in seen_skills:
+            unique_required_skills.append(skill)
+            seen_skills.add(normalized_skill)
 
     matched_skills = []
     missing_skills = []
 
-    for skill in required_skills:
+    for skill in unique_required_skills:
         normalized_skill = normalize_skill(skill)
 
         if normalized_skill in normalized_resume_skills:
@@ -61,12 +71,12 @@ def match_resume_to_job(
 
     match_score = calculate_match_score(
         matched_skills,
-        required_skills
+        unique_required_skills
     )
 
     job_fit = analyze_job_fit(
         match_score,
-        required_skills
+        unique_required_skills
     )
 
     return {
