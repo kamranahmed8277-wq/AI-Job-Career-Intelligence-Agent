@@ -336,3 +336,49 @@ def test_experience_unknown_when_dates_invalid():
     )
 
     assert result["status"] == "Unknown"
+
+
+
+from datetime import date
+
+from backend.app.services.resume_job_matcher import assess_experience
+
+
+def test_experience_range_with_to_separator():
+    result = assess_experience(
+        [{"dates": "April 2025 to March 2026"}],
+        "1 year of experience",
+        reference_date=date(2026, 10, 13),
+    )
+
+    assert result["status"] == "Met"
+
+
+def test_experience_range_with_dash_separator():
+    result = assess_experience(
+        [{"dates": "Apr 2025 – Mar 2026"}],
+        "1 year of experience",
+        reference_date=date(2026, 10, 13),
+    )
+
+    assert result["status"] == "Met"
+
+
+def test_experience_range_with_present():
+    result = assess_experience(
+        [{"dates": "Apr 2026 – Present"}],
+        "1 year of experience",
+        reference_date=date(2026, 10, 13),
+    )
+
+    assert result["status"] == "Not Met"
+
+
+def test_experience_with_invalid_dates_is_unknown():
+    result = assess_experience(
+        [{"dates": "Dates not available"}],
+        "1 year of experience",
+        reference_date=date(2026, 10, 13),
+    )
+
+    assert result["status"] == "Unknown"

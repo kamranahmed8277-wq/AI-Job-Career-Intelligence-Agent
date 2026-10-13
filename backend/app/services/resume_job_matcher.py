@@ -88,120 +88,185 @@ def match_resume_to_job(
         "job_fit": job_fit
     }
 
+
+def _parse_month_year(value: str, reference_date: date) -> date | None:
+    """Parse a month/year date or the word Present."""
+    value = value.strip().strip(".,")
+
+    if value.lower() in {"present", "current", "now"}:
+        return reference_date
+
+    formats = (
+        "%B %Y",  # April 2025
+        "%b %Y",  # Apr 2025
+        "%B, %Y",
+        "%b, %Y",
+    )
+
+    from datetime import datetime
+
+    for fmt in formats:
+        try:
+            parsed = datetime.strptime(value, fmt)
+            return date(parsed.year, parsed.month, 1)
+        except ValueError:
+            continue
+
+    return None
+
+
+def _parse_experience_date_range(
+    dates_text: str,
+    reference_date: date,
+) -> tuple[date, date] | None:
+    """Parse ranges such as 'Jan 2025 – Present' or 'April 2025 to March 2026'."""
+    if not dates_text:
+        return None
+
+    text = dates_text.strip()
+
+    month_pattern = (
+        r"\b("
+        r"January|February|March|April|May|June|July|August|"
+        r"September|October|November|December|"
+        r"Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec"
+        r")\.?\s*,?\s+\d{4}\b"
+    )
+
+    matches = list(re.finditer(month_pattern, text, flags=re.IGNORECASE))
+
+    if not matches:
+        return None
+
+    start = _parse_month_year(matches[0].group(), reference_date)
+
+    if start is None:
+        return None
+
+    # Use Present, Current, or Now as the end date when specified.
+    remaining_text = text[matches[0].end():].strip()
+    if re.match(r"^(?:to\b|[-–—])\s*(?:present|current|now)\b",
+                remaining_text, flags=re.IGNORECASE):
+        end = reference_date
+    else:
+        if len(matches) < 2:
+            return None
+        end = _parse_month_year(matches[1].group(), reference_date)
+
+    if end is None or end < start:
+        return None
+
+    return start, end
+
+
 def assess_experience(
-    resume_experience: list[dict],
-    required_experience: str | None,
-    reference_date: date | None = None
+        resume_experience,
+        required_experience,
+        reference_date: date | None = None,
 ) -> dict:
-    """Compare resume experience duration with the job requirement."""
+    """
+    Compare dated resume experience against a job's required experience.
+
+    The calculation counts calendar months inclusively. This is a
+    practical month-level estimate, not an exact day-by-day duration.
+    """
+    reference_date = reference_date or date.today()
 
     if not required_experience:
         return {
             "status": "Unknown",
-            "required": None,
-            "evidence": "No experience requirement found."
+            "required": required_experience,
+            "evidence": "No experience requirement was provided.",
         }
 
-    # Extract the required number of years or months.
-    requirement = re.search(
-        r"(\d+(?:\.\d+)?)\s*(years?|yrs?|months?|mos?)\b",
-        required_experience,
-        re.IGNORECASE
+    requirement_text = str(required_experience).lower()
+    requirement_match = re.search(
+        r"(\d+(?:\.\d+)?)\s*\+?\s*(years?|yrs?|months?|mos?)",
+        requirement_text,
     )
 
-    if not requirement:
+    if not requirement_match:
         return {
             "status": "Unknown",
             "required": required_experience,
-            "evidence": "Could not understand the experience requirement."
+            "evidence": "Could not determine the required experience duration.",
         }
 
-    required_amount = float(requirement.group(1))
-    unit = requirement.group(2).lower()
+    amount = float(requirement_match.group(1))
+    unit = requirement_match.group(2)
 
-    if unit.startswith(("year", "yr")):
-        required_months = required_amount * 12
+    required_months = (
+        round(amount * 12)
+        if unit.startswith(("year", "yr"))
+        else round(amount)
+    )
+
+    if isinstance(resume_experience, str):
+        records = [{"dates": resume_experience}]
+    elif isinstance(resume_experience, dict):
+        records = [resume_experience]
     else:
-        required_months = required_amount
+        records = resume_experience or []
 
-    # Use today's date in the application, or a supplied date in tests.
-    today = reference_date or date.today()
-
-    total_months = 0
-    found_dates = False
-
-    for record in resume_experience:
-        dates = record.get("dates")
-
-        if not dates or not isinstance(dates, str):
+    durations = []
+    for record in records:
+        if not isinstance(record, dict):
             continue
 
-        # Example: Apr 2026 – Present
-        parts = re.split(r"\s*[–—-]\s*", dates, maxsplit=1)
-
-        if len(parts) != 2:
+        dates_text = record.get("dates")
+        if not dates_text:
             continue
 
-        try:
-            start = datetime.strptime(parts[0].strip(), "%b %Y").date()
-        except ValueError:
-            try:
-                start = datetime.strptime(
-                    parts[0].strip(), "%B %Y"
-                ).date()
-            except ValueError:
-                continue
-
-        if parts[1].strip().lower() == "present":
-            end = today
-        else:
-            try:
-                end = datetime.strptime(
-                    parts[1].strip(), "%b %Y"
-                ).date()
-            except ValueError:
-                try:
-                    end = datetime.strptime(
-                        parts[1].strip(), "%B %Y"
-                    ).date()
-                except ValueError:
-                    continue
-
-        if start > today or end < start:
-            continue
-
-        months = (
-            (end.year - start.year) * 12
-            + end.month - start.month
+        date_range = _parse_experience_date_range(
+            str(dates_text),
+            reference_date,
         )
 
-        total_months += months
-        found_dates = True
+        if date_range is None:
+            continue
 
-    if not found_dates:
+        start, end = date_range
+        months = (
+                (end.year - start.year) * 12
+                + end.month - start.month
+                + 1
+        )
+        durations.append(months)
+
+    if not durations:
         return {
             "status": "Unknown",
             "required": required_experience,
-            "evidence": "No valid employment date ranges were found."
+            "evidence": "No valid employment date ranges were found.",
         }
+
+    # Sum the records as a simple estimate. Overlapping jobs can be
+    # double-counted, so this should not be treated as verified total tenure.
+    total_months = sum(durations)
 
     if total_months >= required_months:
         status = "Met"
     else:
         status = "Not Met"
 
+    years, months = divmod(total_months, 12)
+    duration_parts = []
+
+    if years:
+        duration_parts.append(f"{years} year{'s' if years != 1 else ''}")
+    if months:
+        duration_parts.append(f"{months} month{'s' if months != 1 else ''}")
+
+    duration_text = " ".join(duration_parts) or "less than one month"
+
     return {
         "status": status,
         "required": required_experience,
         "evidence": (
-            f"Resume shows approximately {total_months} months "
-            f"of experience; the job requires "
-            f"{required_months:g} months."
-        )
+            f"Resume date ranges indicate approximately {duration_text} "
+            f"of experience ({total_months} calendar months)."
+        ),
     }
-
-
-
 
 
 def assess_education(
